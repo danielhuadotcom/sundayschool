@@ -1,0 +1,2392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fffaf0">
+<title>David · 大卫</title>
+
+<style>
+  :root {
+    --paper: #fffaf0;
+    --ink: #293e51;
+    --blue: #3675bb;
+    --gold: #ffdd81;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI",
+      "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, input { font: inherit; }
+
+  button {
+    color: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  button:focus-visible, input:focus-visible {
+    outline: 4px solid #0082bd;
+    outline-offset: 3px;
+  }
+
+  button:disabled {
+    opacity: .25;
+    cursor: default;
+  }
+
+  #app {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 46px minmax(0, 1fr) 64px;
+  }
+
+  header, footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 12px;
+    z-index: 10;
+    background: var(--paper);
+  }
+
+  .dots, .tools, #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .dot {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #e9eef2;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .dot[aria-current="step"] {
+    background: var(--blue);
+    color: white;
+  }
+
+  .tool {
+    min-width: 40px;
+    height: 37px;
+    padding: 3px 9px;
+    border: 0;
+    border-radius: 12px;
+    background: #edf1f4;
+    font-size: 23px;
+  }
+
+  #pinyinToggle {
+    font-size: 14px;
+    font-weight: 750;
+  }
+
+  .fullscreen-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 105px;
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  .fullscreen-symbol {
+    font-size: 23px;
+    line-height: 1;
+  }
+
+  #stage {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /*
+    This frame is fitted to the image's actual aspect ratio.
+    The entire landscape illustration stays visible.
+  */
+  #artFrame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+    border-radius: 17px;
+    background: #e9f1e5;
+    isolation: isolate;
+  }
+
+  #artImage {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 1;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  /* Missing-image fallback: pictures, not error messages. */
+  .fallback {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 4%;
+    padding: 5%;
+    background:
+      radial-gradient(circle at 82% 17%, #fff0a2 0 7%, transparent 7.3%),
+      linear-gradient(#cde9f8 0 61%, #b9d89b 61% 100%);
+  }
+
+  .fallback::before,
+  .fallback::after {
+    content: "";
+    position: absolute;
+    width: 85%;
+    height: 60%;
+    bottom: -28%;
+    border-radius: 50%;
+    background: #90bd7d;
+    z-index: 0;
+  }
+
+  .fallback::before { left: -20%; }
+  .fallback::after { right: -25%; background: #a7ca85; }
+
+  .fallback > span {
+    position: relative;
+    z-index: 1;
+    font-size: clamp(90px, 17vw, 230px);
+    line-height: 1.2;
+    text-align: center;
+    filter: drop-shadow(0 12px 12px #0002);
+  }
+
+  .fallback.duo > span {
+    font-size: clamp(75px, 13vw, 190px);
+  }
+
+  .fallback.lineup {
+    gap: 0;
+    padding: 2%;
+  }
+
+  .fallback.lineup > span {
+    flex: 1;
+    font-size: clamp(36px, 6.2vw, 90px);
+  }
+
+  .fallback.gold {
+    background: radial-gradient(circle at 50% 30%, #fff9d9, #f5d477);
+  }
+
+  .fallback.gold::before,
+  .fallback.gold::after {
+    display: none;
+  }
+
+  .whole-hit {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+  }
+
+  .picture-button {
+    position: absolute;
+    z-index: 6;
+    display: grid;
+    place-items: center;
+    width: clamp(62px, 7.5vw, 96px);
+    height: clamp(62px, 7.5vw, 96px);
+    padding: 0;
+    border: 4px solid white;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 5px 22px #0002;
+    font-size: clamp(35px, 4.5vw, 61px);
+    font-weight: 850;
+  }
+
+  .top-right { top: 4%; right: 3%; }
+
+  .question {
+    animation: float 2s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    50% { transform: translateY(-7px) rotate(5deg); }
+  }
+
+  .feedback {
+    position: absolute;
+    z-index: 5;
+    right: 5%;
+    top: 6%;
+    font-size: clamp(80px, 12vw, 160px);
+    filter: drop-shadow(0 4px 3px white);
+    pointer-events: none;
+    animation: stamp .25s ease-out;
+  }
+
+  @keyframes stamp {
+    from { transform: scale(1.6) rotate(-8deg); opacity: 0; }
+    to { transform: scale(1) rotate(-8deg); opacity: 1; }
+  }
+
+  .zones {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  .brother {
+    position: relative;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .brother:hover { background: #ffffff0d; }
+
+  .brother .cross {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(36px, 6.3vw, 86px);
+    filter: drop-shadow(0 3px 2px white);
+  }
+
+  .two-zones {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gift-zone {
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+  }
+
+  .scan-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    height: 6px;
+    background: #c3ffff;
+    box-shadow: 0 0 28px 13px #33dcffaa;
+    pointer-events: none;
+    animation: scan 1.2s ease-in-out forwards;
+  }
+
+  @keyframes scan {
+    0% { top: 0; opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  /* Short teaching bubbles: English, aligned Pinyin, Chinese. */
+  .theme {
+    position: absolute;
+    z-index: 5;
+    left: 50%;
+    bottom: 4%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 88%;
+    padding: 9px 22px 11px;
+    border-radius: 20px;
+    background: #fffffff5;
+    box-shadow: 0 3px 18px #17354c12;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .bi { display: block; }
+
+  .en {
+    display: block;
+    font-size: clamp(19px, 2.2vw, 27px);
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .zh {
+    display: block;
+    margin-top: 4px;
+    font-size: clamp(21px, 2.35vw, 29px);
+    font-weight: 650;
+    line-height: 1.65;
+    letter-spacing: .05em;
+  }
+
+  ruby {
+    ruby-align: center;
+    white-space: nowrap;
+  }
+
+  rt {
+    font-family: system-ui, sans-serif;
+    font-size: .52em;
+    font-weight: 500;
+    color: #667489;
+  }
+
+  .no-pinyin rt { visibility: hidden; }
+
+  .cue-instruction {
+    display: block;
+    margin-top: 5px;
+    color: #52657b;
+    font-size: clamp(14px, 1.45vw, 18px);
+    font-weight: 550;
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  .picture-name {
+    position: absolute;
+    z-index: 5;
+    top: 4%;
+    padding: 7px 15px;
+    border-radius: 16px;
+    background: #fffffff2;
+    box-shadow: 0 3px 15px #17354c10;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .picture-name.left {
+    left: 25%;
+    transform: translateX(-50%);
+  }
+
+  .picture-name.right {
+    left: 75%;
+    transform: translateX(-50%);
+  }
+
+  .picture-name.corner {
+    left: 3%;
+    max-width: 80%;
+  }
+
+  .picture-name .en {
+    font-size: clamp(17px, 1.8vw, 23px);
+  }
+
+  .picture-name .zh {
+    font-size: clamp(19px, 2vw, 25px);
+    margin-top: 2px;
+  }
+
+  /* Scripture remains verbatim; Chinese is a simple memory cue. */
+  .bible-footnote {
+    position: absolute;
+    z-index: 5;
+    top: 3%;
+    left: 3%;
+    max-width: min(76%, 740px);
+    padding: 8px 13px;
+    border-radius: 13px;
+    background: #fffffff0;
+    box-shadow: 0 2px 12px #17354c0b;
+    text-align: left;
+    pointer-events: none;
+  }
+
+  .bible-footnote blockquote {
+    margin: 0;
+    color: #344b61;
+    font-size: clamp(14px, 1.45vw, 18px);
+    font-weight: 550;
+    line-height: 1.35;
+  }
+
+  .bible-reference {
+    display: block;
+    margin-top: 4px;
+    color: #718094;
+    font-size: clamp(10px, 1vw, 13px);
+    font-style: normal;
+    font-weight: 650;
+    line-height: 1.3;
+  }
+
+  .theme.scripture-cue {
+    max-width: 89%;
+    padding: 12px 23px;
+  }
+
+  .scripture-words {
+    max-width: 800px;
+    margin: 0 auto;
+    color: #263d52;
+    font-size: clamp(23px, 2.8vw, 36px);
+    font-weight: 850;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .scripture-cue .bible-reference { margin-top: 6px; }
+
+  .scripture-memory {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 6px;
+  }
+
+  .scripture-memory-label {
+    color: #778597;
+    font-size: 11px;
+    font-weight: 650;
+  }
+
+  .scripture-memory .zh {
+    display: inline-block;
+    margin: 0;
+    font-size: clamp(21px, 2.2vw, 28px);
+  }
+
+  .scripture-cue .cue-instruction { margin-top: 4px; }
+
+  .oil-stream {
+    position: absolute;
+    z-index: 4;
+    top: 10%;
+    left: 51%;
+    height: 51%;
+    width: 14px;
+    border-radius: 50%;
+    background: linear-gradient(#fff8c8, #fbc437, transparent);
+    box-shadow: 0 0 35px 15px #ffdc6a99;
+    transform-origin: top;
+    pointer-events: none;
+    animation: oil 2s ease-out forwards;
+  }
+
+  @keyframes oil {
+    0% { transform: scaleY(0); opacity: 0; }
+    25% { transform: scaleY(.8); opacity: 1; }
+    75% { transform: scaleY(1); opacity: 1; }
+    100% { transform: scaleY(1); opacity: 0; }
+  }
+
+  .anointed {
+    animation: golden-light 2s ease-in-out;
+  }
+
+  @keyframes golden-light {
+    50% {
+      box-shadow: inset 0 0 80px #ffe26c;
+      filter: sepia(.25);
+    }
+  }
+
+  .nav {
+    flex: 0 0 auto;
+    width: 66px;
+    height: 48px;
+    border: 0;
+    border-radius: 15px;
+    background: #e7eef7;
+    font-size: 32px;
+    font-weight: 850;
+  }
+
+  #next { background: var(--gold); }
+
+  #controls {
+    flex: 1;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .control {
+    flex: 0 0 auto;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 58px;
+    height: 44px;
+    padding: 3px 9px;
+    border: 2px solid transparent;
+    border-radius: 13px;
+    background: #edf1f4;
+  }
+
+  .control[aria-pressed="true"] {
+    background: #ffe4a2;
+    border-color: #d6ad4e;
+  }
+
+  .control.gold { background: var(--gold); }
+
+  .control-symbol {
+    display: block;
+    font-size: 23px;
+    line-height: 1;
+  }
+
+  .control-word {
+    display: block;
+    font-size: 11px;
+    line-height: 1.15;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .mini-count {
+    min-width: 65px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #748296;
+  }
+
+  .timeline-controls {
+    width: min(430px, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .timeline-icons {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .timeline-icons .control {
+    height: 36px;
+    min-width: 57px;
+    padding: 1px 7px;
+    border-radius: 9px;
+  }
+
+  .timeline-icons .control-symbol { font-size: 19px; }
+  .timeline-icons .control-word { font-size: 10px; }
+
+  .timeline-arrow {
+    color: #929aa5;
+    font-size: 16px;
+  }
+
+  #timelineSlider {
+    width: 100%;
+    height: 17px;
+    margin: 1px 0 0;
+    accent-color: #c99221;
+    touch-action: pan-x;
+  }
+
+  dialog {
+    width: min(690px, 91vw);
+    max-height: 87vh;
+    padding: 25px;
+    overflow: auto;
+    border: 0;
+    border-radius: 23px;
+    color: var(--ink);
+    background: var(--paper);
+    box-shadow: 0 20px 90px #0005;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+
+  dialog::backdrop { background: #122a40d9; }
+
+  dialog h2 {
+    margin: 0 0 12px;
+    font-size: 25px;
+  }
+
+  dialog p { margin: 12px 0; }
+  dialog .bi { margin: 18px 0; text-align: center; }
+  dialog .en { font-size: 21px; }
+  dialog .zh { font-size: 23px; }
+
+  dialog blockquote {
+    margin: 14px 0;
+    padding: 12px 16px;
+    border-left: 4px solid #d8b75e;
+    background: #fff1cf;
+    border-radius: 0 12px 12px 0;
+  }
+
+  dialog button {
+    min-height: 44px;
+    padding: 8px 20px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--gold);
+    font-weight: 750;
+  }
+
+  #fullscreenNotice {
+    position: fixed;
+    z-index: 100;
+    top: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 88vw;
+    padding: 11px 17px;
+    border-radius: 14px;
+    color: white;
+    background: #233b50f5;
+    box-shadow: 0 5px 25px #0003;
+    text-align: center;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 760px) {
+    header {
+      padding-inline: 8px;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 29px;
+      height: 29px;
+      font-size: 12px;
+    }
+
+    .dots, .tools { gap: 4px; }
+
+    .tool {
+      min-width: 34px;
+      padding-inline: 6px;
+    }
+
+    #pinyinToggle { font-size: 12px; }
+
+    .fullscreen-control {
+      min-width: 90px;
+      font-size: 11px;
+    }
+
+    .nav { width: 49px; }
+    #controls { gap: 6px; }
+
+    .control {
+      min-width: 48px;
+      padding-inline: 5px;
+    }
+
+    .control-word { font-size: 10px; }
+
+    .mini-count {
+      min-width: 55px;
+      font-size: 12px;
+    }
+
+    .theme { padding: 7px 16px 9px; }
+
+    .bible-footnote {
+      padding: 6px 10px;
+      max-width: 79%;
+    }
+
+    .theme.scripture-cue { padding: 9px 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+</style>
+</head>
+
+<body>
+<div id="app">
+  <header>
+    <nav class="dots" aria-label="Choose a slide"></nav>
+
+    <div class="tools">
+      <button id="pinyinToggle" class="tool" aria-pressed="true">
+        拼音 ON
+      </button>
+
+      <button id="soundTest" class="tool" aria-label="Play sheep sound">
+        🐑
+      </button>
+
+      <button id="teacherButton" class="tool" aria-label="Open teacher notes">
+        📝
+      </button>
+
+      <button id="fullscreenButton"
+        class="tool fullscreen-control"
+        aria-label="Enter fullscreen"
+        aria-pressed="false">
+        <span class="fullscreen-symbol" aria-hidden="true">⛶</span>
+        <span>Full screen</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="stage" aria-label="David: The Shepherd Boy"></main>
+
+  <footer>
+    <button id="back" class="nav" aria-label="Previous slide">←</button>
+    <div id="controls" aria-label="Picture activities"></div>
+    <button id="next" class="nav" aria-label="Next slide">→</button>
+  </footer>
+</div>
+
+<dialog id="teacherDialog">
+  <h2 id="dialogTitle"></h2>
+  <div id="dialogBody"></div>
+  <form method="dialog">
+    <button>Back to pictures</button>
+  </form>
+</dialog>
+
+<div id="fullscreenNotice" role="status" hidden></div>
+<div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   IMAGE MANIFEST
+
+   All artwork should be LANDSCAPE.
+   Images are displayed without cropping.
+
+   Existing images:
+     samuel.png
+     lineup.png
+     sheep1.png
+     sheep2.png
+     sheep3.png
+     anointing.png
+
+   The other filenames are optional landscape illustrations.
+   Missing images receive a picture-only fallback.
+
+   Edit the filenames here to match your assets.
+   ============================================================ */
+
+const IMAGES = {
+  samuel: "samuel.png",
+  lineup: "lineup.png",
+  sheep1: "sheep1.png",
+  sheep2: "sheep2.png",
+  sheep3: "sheep3.png",
+  anointing: "anointing.png",
+
+  // Slide 2: one full landscape illustration per trait.
+  tall: "trait-tall.png",
+  strong: "trait-strong.png",
+  handsome: "trait-handsome.png",
+  proud: "trait-proud.png",
+  selfish: "trait-selfish.png",
+  disobedient: "trait-disobedient.png",
+  saul: "saul-test.png",
+
+  // Slide 4: matching landscape compositions before/after scanning.
+  // Warrior on the left; shepherd boy on the right.
+  heartOutside: "heart-outside.png",
+  heartInside: "heart-inside.png",
+
+  // Slide 6: matching landscape compositions in four states.
+  // Fancy gift on the left; old cardboard box on the right.
+  giftsClosed: "gifts-closed.png",
+  giftsFancyOpen: "gifts-fancy-open.png",
+  giftsOldOpen: "gifts-old-open.png",
+  giftsBothOpen: "gifts-both-open.png",
+
+  // Slides 7–8: full landscape illustrations, not portrait cards.
+  sheepCare: "little-sheep.png",
+  caves: "david-cave.png",
+  king: "big-king.png",
+  toys: "little-toys.png",
+  trust: "big-trust.png",
+  helping: "little-help.png",
+  love: "big-love.png"
+};
+
+/* ---------- Text helpers ---------- */
+
+const esc = value => String(value).replace(/[&<>"']/g, character => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+}[character]));
+
+function chineseRuby(text, pinyin) {
+  const syllables = pinyin.trim().split(/\s+/);
+  let index = 0;
+
+  return [...text].map(character => {
+    if (/\p{Script=Han}/u.test(character)) {
+      return `<ruby>${esc(character)}<rt>${esc(syllables[index++] || "")}</rt></ruby>`;
+    }
+    return esc(character);
+  }).join("");
+}
+
+function T(english, chinese, pinyin) {
+  return `<span class="bi">
+    <span class="en" lang="en">${esc(english)}</span>
+    <span class="zh" lang="zh-Hans">${chineseRuby(chinese, pinyin)}</span>
+  </span>`;
+}
+
+function cue(english, chinese, pinyin, instruction = "") {
+  return `<div class="theme lesson-cue">
+    ${T(english, chinese, pinyin)}
+    ${instruction
+      ? `<span class="cue-instruction" lang="en">${esc(instruction)}</span>`
+      : ""}
+  </div>`;
+}
+
+function pictureName(position, english, chinese, pinyin) {
+  return `<div class="picture-name ${position}">
+    ${T(english, chinese, pinyin)}
+  </div>`;
+}
+
+/* ---------- Exact excerpts from the supplied NIV passage ---------- */
+
+const SCRIPTURE = {
+  chosen: {
+    text: "I have chosen one of his sons to be king.",
+    reference: "1 Samuel 16:1"
+  },
+  brothers: {
+    text: "The Lord has not chosen these.",
+    reference: "1 Samuel 16:10"
+  },
+  moreSons: {
+    text: "Are these all the sons you have?",
+    reference: "1 Samuel 16:11"
+  },
+  heart: {
+    text: "but the Lord looks at the heart.",
+    reference: "1 Samuel 16:7"
+  },
+  sheep: {
+    text: "He is tending the sheep.",
+    reference: "1 Samuel 16:11"
+  },
+  anoint: {
+    text: "Rise and anoint him; this is the one.",
+    reference: "1 Samuel 16:12"
+  }
+};
+
+function scriptureFootnote(passage) {
+  return `<aside class="bible-footnote" aria-label="Bible quotation">
+    <blockquote lang="en">“${esc(passage.text)}”</blockquote>
+    <cite class="bible-reference">
+      ${esc(passage.reference)} · NIV · excerpt
+    </cite>
+  </aside>`;
+}
+
+function scriptureCue(passage, chinese, pinyin, instruction = "") {
+  return `<div class="theme lesson-cue scripture-cue">
+    <blockquote class="scripture-words" lang="en">
+      “${esc(passage.text)}”
+    </blockquote>
+
+    <cite class="bible-reference">
+      ${esc(passage.reference)} · NIV · excerpt
+    </cite>
+
+    <div class="scripture-memory">
+      <span class="scripture-memory-label">Our reminder</span>
+      <span class="zh" lang="zh-Hans">${chineseRuby(chinese, pinyin)}</span>
+    </div>
+
+    ${instruction
+      ? `<span class="cue-instruction" lang="en">${esc(instruction)}</span>`
+      : ""}
+  </div>`;
+}
+
+/* ---------- Lesson data ---------- */
+
+const titles = [
+  "Who will be king?",
+  "The king checklist",
+  "Jesse's seven sons",
+  "God sees the heart",
+  "Caring for sheep",
+  "Look beyond the outside",
+  "Chosen—and waiting",
+  "Little jobs prepare us"
+];
+
+const refs = [
+  "1 Samuel 16:1 · 撒母耳记上 16:1",
+  "1 Samuel 9:2; 15:23 · 撒母耳记上 9:2；15:23",
+  "1 Samuel 16:6–11 · 撒母耳记上 16:6–11",
+  "1 Samuel 16:7 · 撒母耳记上 16:7",
+  "1 Samuel 16:11; 17:34–37",
+  "1 Samuel 16:7",
+  "1 Samuel 16:13; 2 Samuel 5:4–5",
+  "Colossians 3:23 · 歌罗西书 3:23"
+];
+
+const traits = [
+  {
+    key: "tall",
+    emoji: ["📏", "👑"],
+    alt: "A tall, royal-looking person",
+    name: ["Tall", "个子高", "gè zi gāo"]
+  },
+  {
+    key: "strong",
+    emoji: ["💪"],
+    alt: "A very strong person",
+    name: ["Strong", "力气大", "lì qi dà"]
+  },
+  {
+    key: "handsome",
+    emoji: ["😎"],
+    alt: "A handsome person",
+    name: ["Handsome", "长得帅", "zhǎng de shuài"]
+  },
+  {
+    key: "proud",
+    emoji: ["😤"],
+    alt: "Someone who only wants their own way",
+    name: ["Only my way!", "只听自己的", "zhǐ tīng zì jǐ de"]
+  },
+  {
+    key: "selfish",
+    emoji: ["🤑"],
+    alt: "Someone who only thinks of themselves",
+    name: ["All for me!", "只想自己", "zhǐ xiǎng zì jǐ"]
+  },
+  {
+    key: "disobedient",
+    emoji: ["🙉"],
+    alt: "Someone who will not listen to God",
+    name: ["Won't listen to God", "不听神的话", "bù tīng shén de huà"]
+  }
+];
+
+const photos = [
+  {
+    key: "sheep1",
+    emoji: ["🐑", "🌿"],
+    alt: "Sheep in a pasture",
+    name: ["David cared for sheep.", "大卫照顾小羊。", "dà wèi zhào gù xiǎo yáng"]
+  },
+  {
+    key: "sheep2",
+    emoji: ["🐑", "💩"],
+    alt: "Dirty, muddy sheep",
+    name: ["Sheep get dirty!", "小羊脏了！", "xiǎo yáng zāng le"]
+  },
+  {
+    key: "sheep3",
+    emoji: ["⛰️", "🦁", "🐻"],
+    alt: "Rocky hills and wild animals",
+    name: ["David kept the sheep safe.", "大卫保护小羊。", "dà wèi bǎo hù xiǎo yáng"]
+  }
+];
+
+const timelinePictures = [
+  {
+    key: "anointing",
+    emoji: ["🧔🏻‍♂️", "🫗", "🧑🏻‍🌾"],
+    alt: "Samuel anoints David",
+    name: ["God chose David!", "神选了大卫！", "shén xuǎn le dà wèi"]
+  },
+  {
+    key: "sheepCare",
+    emoji: ["🧑🏻‍🌾", "🐑"],
+    alt: "David caring for sheep",
+    name: ["Still caring for sheep.", "还要照顾小羊。", "hái yào zhào gù xiǎo yáng"]
+  },
+  {
+    key: "caves",
+    emoji: ["⛰️", "🧑🏻"],
+    alt: "David hiding in a cave",
+    name: ["David had to wait.", "大卫还要等。", "dà wèi hái yào děng"]
+  },
+  {
+    key: "king",
+    emoji: ["👑", "🧑🏻"],
+    alt: "David becomes king at thirty",
+    name: ["David became king!", "大卫当国王了！", "dà wèi dāng guó wáng le"]
+  }
+];
+
+const purposes = [
+  [
+    {
+      key: "sheepCare",
+      emoji: ["🧑🏻‍🌾", "🐏"],
+      alt: "David carefully tending his sheep",
+      name: ["Care for sheep", "照顾小羊", "zhào gù xiǎo yáng"]
+    },
+    {
+      key: "king",
+      emoji: ["👑", "👨‍👩‍👧‍👦"],
+      alt: "David caring for God's people as king",
+      name: ["Care for God's people", "照顾大家", "zhào gù dà jiā"]
+    }
+  ],
+  [
+    {
+      key: "toys",
+      emoji: ["🧸", "🧺"],
+      alt: "A child putting all the toys away",
+      name: ["Put the toys away", "收好玩具", "shōu hǎo wán jù"]
+    },
+    {
+      key: "trust",
+      emoji: ["🌟", "🤝"],
+      alt: "A dependable child others can trust",
+      name: ["People can trust you", "让人放心", "ràng rén fàng xīn"]
+    }
+  ],
+  [
+    {
+      key: "helping",
+      emoji: ["🤝", "🐱"],
+      alt: "A child helping family and caring for a pet",
+      name: ["Help at home", "帮家人", "bāng jiā rén"]
+    },
+    {
+      key: "love",
+      emoji: ["💖", "👨‍👩‍👧‍👦"],
+      alt: "A child growing in love for others",
+      name: ["Love like Jesus", "像耶稣一样爱人", "xiàng yē sū yí yàng ài rén"]
+    }
+  ]
+];
+
+/* ---------- Application state ---------- */
+
+let page = 0;
+let pinyinOn = true;
+
+const state = {
+  intro: false,
+  trait: 0,
+  chosenTraits: new Set(),
+  testingSaul: false,
+  rejected: new Set(),
+  scanned: false,
+  photo: 0,
+  gifts: [false, false],
+  timeline: 0,
+  pouring: false,
+  purpose: 0,
+  flipped: [false, false, false]
+};
+
+const stage = document.querySelector("#stage");
+const controls = document.querySelector("#controls");
+const dialog = document.querySelector("#teacherDialog");
+const missingImages = new Set();
+
+/* ---------- Image interaction helpers ---------- */
+
+function wholeHit(action, label) {
+  return `<button class="whole-hit"
+    data-action="${action}"
+    aria-label="${esc(label)}"></button>`;
+}
+
+function pictureButton(action, symbol, label, classes = "top-right") {
+  return `<button class="picture-button ${classes}"
+    data-action="${action}"
+    aria-label="${esc(label)}">${symbol}</button>`;
+}
+
+function control(action, symbol, label, selected = null, extra = "", ariaLabel = label) {
+  return `<button class="control ${extra}"
+    data-action="${action}"
+    aria-label="${esc(ariaLabel)}"
+    title="${esc(label)}"
+    ${selected === null ? "" : `aria-pressed="${selected}"`}>
+    <span class="control-symbol" aria-hidden="true">${symbol}</span>
+    <span class="control-word">${esc(label)}</span>
+  </button>`;
+}
+
+/* ---------- Eight picture-first slides ---------- */
+
+function viewForPage() {
+  switch (page) {
+    case 0:
+      return {
+        key: "samuel",
+        emoji: ["🧔🏻‍♂️", "❓"],
+        alt: "Samuel wonders who God will choose",
+        overlays:
+          pictureButton("intro", "?", "How do we spot a king?", "top-right question") +
+          scriptureFootnote(SCRIPTURE.chosen) +
+          (state.intro
+            ? cue(
+                "Tall? Strong? Handsome?",
+                "高？壮？帅？",
+                "gāo zhuàng shuài",
+                "What do you think? Then press →."
+              )
+            : cue(
+                "Who will be king?",
+                "谁当国王？",
+                "shuí dāng guó wáng",
+                "Tap ? to guess."
+              ))
+      };
+
+    case 1: {
+      if (state.testingSaul) {
+        return {
+          key: "saul",
+          emoji: ["👑", "😤"],
+          alt: "King Saul looked royal but did not obey God",
+          overlays:
+            wholeHit("saul", "Return to the picture checklist") +
+            cue(
+              "Saul did not listen to God.",
+              "扫罗不听神的话。",
+              "sǎo luó bù tīng shén de huà",
+              "Tap Back to return to the pictures."
+            )
+        };
+      }
+
+      const trait = traits[state.trait];
+      const chosen = state.chosenTraits.has(state.trait);
+
+      const instruction = !chosen
+        ? "Would you choose this? Tap the picture."
+        : state.trait < 3
+          ? "That is okay—but a good heart matters more."
+          : "A good king should listen and care.";
+
+      return {
+        ...trait,
+        overlays:
+          wholeHit("chooseTrait", "Choose this trait") +
+          (chosen
+            ? `<div class="feedback" aria-hidden="true">${state.trait < 3 ? "✅" : "❌"}</div>`
+            : "") +
+          cue(...trait.name, instruction)
+      };
+    }
+
+    case 2: {
+      const allRejected = state.rejected.size === 7;
+
+      let explanation;
+
+      if (allRejected) {
+        explanation =
+          scriptureFootnote(SCRIPTURE.moreSons) +
+          cue(
+            "God did not choose these seven.",
+            "神没有选他们。",
+            "shén méi yǒu xuǎn tā men",
+            "Who is missing? Press →."
+          );
+      } else if (state.rejected.size > 0) {
+        explanation = cue(
+          "Not this one!",
+          "不是他！",
+          "bú shì tā",
+          "Tap another brother."
+        );
+      } else {
+        explanation = cue(
+          "Did God choose him?",
+          "神选了他吗？",
+          "shén xuǎn le tā ma",
+          "Tap a brother."
+        );
+      }
+
+      return {
+        key: "lineup",
+        emoji: ["👨🏻", "🧑🏻", "🧑🏽", "🧑🏼", "🧑🏾", "🧑🏻", "🧑🏽", "🧑🏼"],
+        alt: "Father Jesse on the left, presenting seven sons",
+        fallbackClass: "lineup",
+        overlays: `
+          <div class="zones">
+            <div aria-hidden="true"></div>
+            ${Array.from({ length: 7 }, (_, i) => `
+              <button class="brother" data-action="brother:${i}"
+                aria-label="Brother ${i + 1}${state.rejected.has(i) ? ', not chosen' : ''}"
+                aria-pressed="${state.rejected.has(i)}">
+                ${state.rejected.has(i)
+                  ? `<span class="cross" aria-hidden="true">❌</span>`
+                  : ""}
+              </button>
+            `).join("")}
+          </div>
+          ${explanation}
+        `
+      };
+    }
+
+    case 3:
+      return {
+        key: state.scanned ? "heartInside" : "heartOutside",
+        emoji: state.scanned
+          ? ["🖤⚡", "💖✨"]
+          : ["🤴🏼⚔️", "🧑🏻‍🌾🐑"],
+        alt: state.scanned
+          ? "Pretend heart scan: a selfish heart and a loving heart"
+          : "A royal warrior and a little shepherd boy",
+        overlays:
+          wholeHit("scan", state.scanned ? "Show the outside again" : "Look inside") +
+          (state.scanned
+            ? `<span class="scan-line"></span>` +
+              pictureName("left", "Only me!", "只想自己", "zhǐ xiǎng zì jǐ") +
+              pictureName("right", "I love God!", "我爱神", "wǒ ài shén") +
+              scriptureCue(
+                SCRIPTURE.heart,
+                "神看心。",
+                "shén kàn xīn",
+                "Tap again to see the outside."
+              )
+            : pictureButton("scan", "🔍", "Look inside") +
+              cue(
+                "Let's look inside.",
+                "看看心里。",
+                "kàn kan xīn lǐ",
+                "Tap the picture to scan."
+              ))
+      };
+
+    case 4: {
+      const photo = photos[state.photo];
+      return {
+        ...photo,
+        overlays:
+          wholeHit("photoNext", "Show the next sheep photograph") +
+          scriptureFootnote(SCRIPTURE.sheep) +
+          cue(...photo.name, "Tap the picture for another photo.")
+      };
+    }
+
+    case 5: {
+      const [fancyOpen, oldOpen] = state.gifts;
+
+      const key = fancyOpen && oldOpen
+        ? "giftsBothOpen"
+        : fancyOpen
+          ? "giftsFancyOpen"
+          : oldOpen
+            ? "giftsOldOpen"
+            : "giftsClosed";
+
+      let explanation;
+
+      if (fancyOpen && oldOpen) {
+        explanation = cue(
+          "Don't just look outside.",
+          "不要只看外面。",
+          "bú yào zhǐ kàn wài miàn",
+          "Tap a box to close it."
+        );
+      } else if (fancyOpen) {
+        explanation = cue(
+          "Oh no—rubbish inside!",
+          "里面是垃圾！",
+          "lǐ miàn shì lā jī",
+          "Now try the old box."
+        );
+      } else if (oldOpen) {
+        explanation = cue(
+          "Treasure inside!",
+          "里面有宝贝！",
+          "lǐ miàn yǒu bǎo bèi",
+          "What is in the other box? Tap it."
+        );
+      } else {
+        explanation = cue(
+          "Which box would you choose?",
+          "你选哪个盒子？",
+          "nǐ xuǎn nǎ ge hé zi",
+          "Tap a box to open it."
+        );
+      }
+
+      return {
+        key,
+        emoji: [
+          fancyOpen ? "🗑️🪨" : "🎁✨",
+          oldOpen ? "👑💎" : "📦🩹"
+        ],
+        alt: `Fancy box ${fancyOpen ? "with trash inside" : "closed"}; old box ${oldOpen ? "with treasure inside" : "closed"}`,
+        fallbackClass: "gold",
+        overlays: `
+          <div class="two-zones">
+            <button class="gift-zone" data-action="gift:0"
+              aria-label="${fancyOpen ? "Close" : "Open"} the fancy box"
+              aria-expanded="${fancyOpen}"></button>
+
+            <button class="gift-zone" data-action="gift:1"
+              aria-label="${oldOpen ? "Close" : "Open"} the old box"
+              aria-expanded="${oldOpen}"></button>
+          </div>
+          ${explanation}
+        `
+      };
+    }
+
+    case 6: {
+      const picture = timelinePictures[state.timeline];
+
+      const instructions = [
+        state.pouring ? "Now try the pictures below." : "Tap the oil.",
+        "He was not king yet. Try the next picture.",
+        "Keep trusting God. Move to the crown.",
+        "He was thirty years old."
+      ];
+
+      const explanation = state.timeline === 0
+        ? scriptureCue(
+            SCRIPTURE.anoint,
+            "神选了大卫！",
+            "shén xuǎn le dà wèi",
+            instructions[0]
+          )
+        : cue(...picture.name, instructions[state.timeline]);
+
+      return {
+        ...picture,
+        overlays:
+          (state.timeline === 0
+            ? wholeHit("oil", "Pour the anointing oil") +
+              pictureButton("oil", "🫗", "Pour the anointing oil") +
+              (state.pouring ? `<span class="oil-stream"></span>` : "")
+            : "") +
+          explanation
+      };
+    }
+
+    case 7: {
+      const flipped = state.flipped[state.purpose];
+      const picture = purposes[state.purpose][flipped ? 1 : 0];
+
+      return {
+        ...picture,
+        overlays:
+          wholeHit("flip", "Show how this little responsibility helps us grow") +
+          pictureName("corner", ...picture.name) +
+          cue(
+            "Do little things well.",
+            "小事，好好做。",
+            "xiǎo shì hǎo hǎo zuò",
+            flipped
+              ? "Little jobs help us get ready. Tap to go back."
+              : "Tap the picture to see how this helps us grow."
+          )
+      };
+    }
+  }
+}
+
+/* ---------- Rendering ---------- */
+
+function fitArtwork() {
+  const frame = document.querySelector("#artFrame");
+  const img = document.querySelector("#artImage");
+  if (!frame) return;
+
+  const ratio = img && img.naturalWidth
+    ? img.naturalWidth / img.naturalHeight
+    : 16 / 9;
+
+  const availableWidth = Math.max(1, stage.clientWidth - 16);
+  const availableHeight = Math.max(1, stage.clientHeight - 8);
+  const width = Math.min(availableWidth, availableHeight * ratio);
+
+  frame.style.width = `${width}px`;
+  frame.style.height = `${width / ratio}px`;
+}
+
+function renderScene() {
+  const view = viewForPage();
+  const file = `images/${IMAGES[view.key]}`;
+  const missing = missingImages.has(file);
+
+  stage.innerHTML = `
+    <section id="artFrame" aria-label="${esc(titles[page])}">
+      <div
+        class="fallback ${view.emoji.length === 2 ? "duo" : ""} ${view.fallbackClass || ""}"
+        id="fallbackArt"
+        ${missing
+          ? `role="img" aria-label="${esc(view.alt)}"`
+          : `aria-hidden="true"`}>
+        ${view.emoji.map(emoji =>
+          `<span aria-hidden="true">${emoji}</span>`
+        ).join("")}
+      </div>
+
+      ${missing
+        ? ""
+        : `<img id="artImage" src="${file}" alt="${esc(view.alt)}" draggable="false">`}
+
+      ${view.overlays || ""}
+    </section>
+  `;
+
+  const img = document.querySelector("#artImage");
+  const fallback = document.querySelector("#fallbackArt");
+
+  if (img) {
+    function imageFailed() {
+      missingImages.add(file);
+      if (!img.isConnected) return;
+
+      img.hidden = true;
+      fallback.hidden = false;
+      fallback.removeAttribute("aria-hidden");
+      fallback.setAttribute("role", "img");
+      fallback.setAttribute("aria-label", view.alt);
+      fitArtwork();
+    }
+
+    function imageLoaded() {
+      if (!img.isConnected) return;
+      fallback.hidden = true;
+      fitArtwork();
+    }
+
+    img.addEventListener("load", imageLoaded, { once: true });
+    img.addEventListener("error", imageFailed, { once: true });
+
+    if (img.complete) {
+      img.naturalWidth ? imageLoaded() : imageFailed();
+    }
+  }
+
+  if (page === 6 && state.pouring && state.timeline === 0) {
+    document.querySelector("#artFrame").classList.add("anointed");
+  }
+
+  fitArtwork();
+}
+
+function renderControls() {
+  switch (page) {
+    case 0:
+    case 5:
+      controls.innerHTML = "";
+      break;
+
+    case 1:
+      controls.innerHTML =
+        control("traitPrevious", "‹", "Previous", null, "", "Previous trait picture") +
+        `<span class="mini-count">Trait ${state.trait + 1}/6</span>` +
+        control("traitNext", "›", "Next trait") +
+        control(
+          "saul",
+          "👑",
+          state.testingSaul ? "Back" : "Test Saul",
+          state.testingSaul,
+          "gold",
+          state.testingSaul ? "Return to the trait pictures" : "Test King Saul"
+        );
+      break;
+
+    case 2:
+      controls.innerHTML = `
+        <span class="mini-count"
+          aria-label="${state.rejected.size} of seven not chosen">
+          ${state.rejected.size} of 7
+        </span>`;
+      break;
+
+    case 3:
+      controls.innerHTML = control(
+        "scan",
+        state.scanned ? "↻" : "🔍",
+        state.scanned ? "Outside" : "Look inside",
+        state.scanned
+      );
+      break;
+
+    case 4:
+      controls.innerHTML =
+        control("photoPrevious", "‹", "Previous", null, "", "Previous sheep photograph") +
+        `<span class="mini-count">Photo ${state.photo + 1}/3</span>` +
+        control("photoNext", "›", "Next photo") +
+        control("baa", "🐑", "Hear sheep", null, "gold");
+      break;
+
+    case 6: {
+      const labels = ["Chosen", "Sheep", "Waiting", "King"];
+      const icons = ["🫗", "🐏", "⛰️", "👑"];
+
+      controls.innerHTML = `
+        <div class="timeline-controls">
+          <div class="timeline-icons">
+            ${icons.map((icon, i) =>
+              `${i ? '<span class="timeline-arrow" aria-hidden="true">→</span>' : ""}
+               ${control(
+                 `time:${i}`,
+                 icon,
+                 labels[i],
+                 state.timeline === i,
+                 "",
+                 timelinePictures[i].alt
+               )}`
+            ).join("")}
+          </div>
+
+          <input id="timelineSlider"
+            type="range" min="0" max="3" step="1"
+            value="${state.timeline}"
+            aria-label="David's waiting timeline"
+            aria-valuetext="${esc(timelinePictures[state.timeline].alt)}">
+        </div>`;
+      break;
+    }
+
+    case 7:
+      controls.innerHTML =
+        control("purpose:0", "🐏", "David", state.purpose === 0) +
+        control("purpose:1", "🧸", "Toys", state.purpose === 1) +
+        control("purpose:2", "🤝", "Helping", state.purpose === 2) +
+        control("flip", "↔", "Flip", null, "", "Switch between little job and growing purpose") +
+        control("prayer", "🙏", "Pray", null, "gold", "Closing prayer");
+      break;
+  }
+}
+
+function restoreFocus(action) {
+  if (!action) return;
+
+  [...document.querySelectorAll("[data-action]")]
+    .find(button => button.dataset.action === action)
+    ?.focus({ preventScroll: true });
+}
+
+function render(focusAction = null) {
+  renderScene();
+  renderControls();
+
+  document.querySelectorAll(".dot").forEach((button, index) => {
+    if (index === page) {
+      button.setAttribute("aria-current", "step");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
+
+  document.querySelector("#back").disabled = page === 0;
+  document.querySelector("#next").disabled = page === 7;
+
+  restoreFocus(focusAction);
+}
+
+/* ---------- Navigation ---------- */
+
+document.querySelector(".dots").innerHTML = titles.map((title, index) =>
+  `<button class="dot" data-page="${index}"
+    aria-label="Slide ${index + 1}: ${esc(title)}">${index + 1}</button>`
+).join("");
+
+function announce(message) {
+  document.querySelector("#announcement").textContent = message;
+}
+
+function goTo(index) {
+  if (index < 0 || index > 7 || index === page) return;
+
+  page = index;
+  render();
+  announce(`Slide ${page + 1}. ${titles[page]}`);
+  playSound("click");
+}
+
+document.querySelectorAll("[data-page]").forEach(button => {
+  button.addEventListener("click", () => {
+    goTo(Number(button.dataset.page));
+  });
+});
+
+document.querySelector("#back").addEventListener("click", () => goTo(page - 1));
+document.querySelector("#next").addEventListener("click", () => goTo(page + 1));
+
+window.addEventListener("resize", fitArtwork);
+window.visualViewport?.addEventListener("resize", fitArtwork);
+
+document.querySelector("#pinyinToggle").addEventListener("click", event => {
+  pinyinOn = !pinyinOn;
+  document.body.classList.toggle("no-pinyin", !pinyinOn);
+  event.currentTarget.textContent = `拼音 ${pinyinOn ? "ON" : "OFF"}`;
+  event.currentTarget.setAttribute("aria-pressed", String(pinyinOn));
+  playSound("click");
+});
+
+document.querySelector("#soundTest").addEventListener("click", () => {
+  playSound("baa");
+});
+
+/* ---------- Activities ---------- */
+
+let oilTimer;
+let suppressClickUntil = 0;
+
+function updateTimeline(index) {
+  if (state.timeline === index) return;
+
+  state.timeline = index;
+  state.pouring = false;
+  clearTimeout(oilTimer);
+
+  /*
+    Render only the picture so dragging the existing range input
+    is not interrupted by replacing the slider.
+  */
+  renderScene();
+
+  const slider = document.querySelector("#timelineSlider");
+
+  if (slider) {
+    slider.value = index;
+    slider.setAttribute("aria-valuetext", timelinePictures[index].alt);
+  }
+
+  document.querySelectorAll('[data-action^="time:"]').forEach(button => {
+    button.setAttribute(
+      "aria-pressed",
+      String(Number(button.dataset.action.split(":")[1]) === index)
+    );
+  });
+
+  playSound(index === 3 ? "correct" : "click");
+}
+
+function handleActivity(event) {
+  if (Date.now() < suppressClickUntil) {
+    event.preventDefault();
+    return;
+  }
+
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+
+  const action = button.dataset.action;
+  const [type, rawIndex] = action.split(":");
+  const index = Number(rawIndex);
+  const focusAction = event.detail === 0 ? action : null;
+  let redraw = true;
+
+  switch (type) {
+    case "intro":
+      state.intro = !state.intro;
+      playSound("correct");
+      break;
+
+    case "traitPrevious":
+      state.trait = (state.trait + 5) % 6;
+      state.testingSaul = false;
+      playSound("click");
+      break;
+
+    case "traitNext":
+      state.trait = (state.trait + 1) % 6;
+      state.testingSaul = false;
+      playSound("click");
+      break;
+
+    case "chooseTrait":
+      state.chosenTraits.add(state.trait);
+      playSound(state.trait < 3 ? "correct" : "wrong");
+      announce(
+        state.trait < 3
+          ? "An impressive outside does not tell us the heart."
+          : "We want a king who listens to God and cares for others."
+      );
+      break;
+
+    case "saul":
+      state.testingSaul = !state.testingSaul;
+      playSound(state.testingSaul ? "alert" : "click");
+      break;
+
+    case "brother":
+      if (state.rejected.has(index)) return;
+
+      state.rejected.add(index);
+      playSound("wrong");
+
+      announce(
+        state.rejected.size === 7
+          ? "All seven were not chosen. Are these all the sons you have?"
+          : "Not this one."
+      );
+      break;
+
+    case "scan":
+      state.scanned = !state.scanned;
+      playSound("xray");
+      if (state.scanned) announce("God sees the heart.");
+      break;
+
+    case "photoPrevious":
+      state.photo = (state.photo + 2) % 3;
+      playSound("click");
+      break;
+
+    case "photoNext":
+      state.photo = (state.photo + 1) % 3;
+      playSound("click");
+      break;
+
+    case "baa":
+      playSound("baa");
+      redraw = false;
+      break;
+
+    case "gift":
+      state.gifts[index] = !state.gifts[index];
+      playSound(
+        state.gifts[index]
+          ? (index === 0 ? "wrong" : "correct")
+          : "click"
+      );
+      break;
+
+    case "oil":
+      state.pouring = true;
+      clearTimeout(oilTimer);
+      playSound("trumpet");
+
+      oilTimer = setTimeout(() => {
+        state.pouring = false;
+        document.querySelector(".oil-stream")?.remove();
+        document.querySelector("#artFrame")?.classList.remove("anointed");
+      }, 2100);
+      break;
+
+    case "time":
+      updateTimeline(index);
+      redraw = false;
+      break;
+
+    case "purpose":
+      state.purpose = index;
+      playSound("click");
+      break;
+
+    case "flip":
+      state.flipped[state.purpose] = !state.flipped[state.purpose];
+      playSound(state.flipped[state.purpose] ? "correct" : "click");
+      break;
+
+    case "prayer":
+      openTeacherDialog(true);
+      redraw = false;
+      break;
+
+    default:
+      redraw = false;
+  }
+
+  if (redraw) render(focusAction);
+}
+
+stage.addEventListener("click", handleActivity);
+controls.addEventListener("click", handleActivity);
+
+controls.addEventListener("input", event => {
+  if (event.target.id === "timelineSlider") {
+    updateTimeline(Number(event.target.value));
+  }
+});
+
+/* ---------- Keyboard and swipe navigation ---------- */
+
+document.addEventListener("keydown", event => {
+  if (dialog.open || event.target.matches("input, textarea, select")) return;
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    event.preventDefault();
+    goTo(page + (event.key === "ArrowRight" ? 1 : -1));
+  }
+});
+
+let swipeStart = null;
+
+stage.addEventListener("touchstart", event => {
+  if (event.touches.length !== 1) {
+    swipeStart = null;
+    return;
+  }
+
+  const touch = event.touches[0];
+
+  swipeStart = {
+    x: touch.clientX,
+    y: touch.clientY,
+    time: Date.now()
+  };
+}, { passive: true });
+
+stage.addEventListener("touchend", event => {
+  if (!swipeStart) return;
+
+  const touch = event.changedTouches[0];
+  const dx = touch.clientX - swipeStart.x;
+  const dy = touch.clientY - swipeStart.y;
+
+  if (
+    Math.abs(dx) > 65 &&
+    Math.abs(dx) > Math.abs(dy) * 1.5 &&
+    Date.now() - swipeStart.time < 900
+  ) {
+    suppressClickUntil = Date.now() + 500;
+    goTo(page + (dx < 0 ? 1 : -1));
+  }
+
+  swipeStart = null;
+}, { passive: true });
+
+stage.addEventListener("touchcancel", () => {
+  swipeStart = null;
+}, { passive: true });
+
+/* ---------- Teacher notes ---------- */
+
+const teacherNotes = [
+  `
+    <p>Saul did not listen to God. God sent Samuel to Jesse's family
+    in Bethlehem to anoint the king God had chosen.</p>
+
+    <p><strong>Ask:</strong> “What do you think a king looks like?”</p>
+
+    <p>Tap the question mark. Let the children suggest tall, strong,
+    or handsome. The pictures and your voice carry the story.</p>
+
+    <p><strong>Scripture anchor — 1 Samuel 16:1, NIV, excerpt</strong></p>
+    <blockquote>“I have chosen one of his sons to be king.”</blockquote>
+  `,
+
+  `
+    <p>Use Previous and Next trait to show one large illustration at a time.
+    Let a child tap the picture.</p>
+
+    <p>The first three receive a tick. The last three receive a cross.
+    Tap <strong>Test Saul</strong> to show that looking royal is not enough.</p>
+
+    <p><strong>Say:</strong> “Looking like a king is not enough.
+    Does he listen to God?”</p>
+
+    <p><small>The Bible calls Saul tall and handsome in 1 Samuel 9:2.
+    Strength is part of our pretend checklist. The negative pictures
+    are examples of heart problems; 15:23 specifically describes
+    Saul's rebellion.</small></p>
+
+    <p><small>Looks and strength are not bad. They simply cannot tell us
+    whether someone has a loving, obedient heart.</small></p>
+  `,
+
+  `
+    <p>Jesse is on the far left. Let the children tap each of the seven sons.</p>
+
+    <p><strong>Say:</strong> “Not this one!”</p>
+
+    <p>When all seven have crosses, ask: “Is someone missing?”</p>
+
+    <p>David, the youngest, was still caring for the sheep.</p>
+
+    <p><strong>Scripture anchor — 1 Samuel 16:10, NIV, excerpt</strong></p>
+    <blockquote>“The Lord has not chosen these.”</blockquote>
+
+    <p><strong>Samuel's question — 1 Samuel 16:11, NIV, excerpt</strong></p>
+    <blockquote>“Are these all the sons you have?”</blockquote>
+  `,
+
+  `
+    <p><strong>Main theme: God sees the heart.</strong></p>
+
+    <p>Point outside, then point to your heart. Tap the picture to scan.</p>
+
+    <p><strong>Say:</strong> “We see the outside.
+    God knows what is inside.”</p>
+
+    <p><strong>Read aloud — 1 Samuel 16:7, NIV</strong></p>
+    <blockquote>
+      But the Lord said to Samuel, “Do not consider his appearance
+      or his height, for I have rejected him. The Lord does not look
+      at the things people look at. People look at the outward
+      appearance, but the Lord looks at the heart.”
+    </blockquote>
+
+    ${T(
+      "God sees the heart.",
+      "神看心。",
+      "shén kàn xīn"
+    )}
+
+    <p><small>The two characters are pretend examples. Strong people
+    can love God too. We cannot judge real people's hearts by their
+    appearance. The Chinese line is our child-friendly reminder,
+    not a quotation from a Chinese Bible translation.</small></p>
+  `,
+
+  `
+    <p>Show one sheep photograph at a time. Tap the photograph or use
+    Previous and Next photo. Tap <strong>Hear sheep</strong> for the sound.</p>
+
+    <p>Let the children notice dirt, hills, and danger.
+    Shepherding is hard work.</p>
+
+    <p>David protected his sheep from a lion and a bear
+    (1 Samuel 17:34–37).</p>
+
+    <p><strong>Say:</strong> “David cared for the sheep, even when
+    nobody else was watching.”</p>
+
+    <p><strong>Scripture anchor — 1 Samuel 16:11, NIV, excerpt</strong></p>
+    <blockquote>“He is tending the sheep.”</blockquote>
+
+    <p><small>The Bible does not say Jesse forgot David or that
+    everyone hated this job. David was still tending the sheep
+    when Samuel asked for him.</small></p>
+  `,
+
+  `
+    <p>Tap the fancy box on the left, then the old box on the right.</p>
+
+    <p><strong>Ask:</strong> “Did the outside tell us what was inside?”</p>
+
+    <p>Connect this to the main theme: God sees the heart.</p>
+
+    <p>People are not boxes. Everyone matters to God. We do not decide
+    who is good or bad from clothes, size, skin, or appearance.</p>
+
+    <p><strong>Ask:</strong> “How can we be a kind friend?”</p>
+  `,
+
+  `
+    <p>Tap the oil. Samuel anointed David: God chose him for a special task,
+    and God's Spirit came upon him.</p>
+
+    <p>Use the four picture stops or drag the slider:
+    chosen → sheep → waiting in caves → king.</p>
+
+    <p><strong>Say:</strong> “Not king yet. Keep caring.
+    Keep trusting. Keep waiting.”</p>
+
+    <p><strong>God's instruction — 1 Samuel 16:12, NIV, excerpt</strong></p>
+    <blockquote>“Rise and anoint him; this is the one.”</blockquote>
+
+    <p><strong>Read aloud — 1 Samuel 16:13, NIV, excerpt</strong></p>
+    <blockquote>
+      So Samuel took the horn of oil and anointed him in the presence
+      of his brothers, and from that day on the Spirit of the Lord
+      came powerfully upon David.
+    </blockquote>
+
+    <p>David became king over Judah at thirty and later ruled all Israel
+    (2 Samuel 5:4–5).</p>
+
+    <p><small>The Bible does not give David's exact age at anointing.
+    A fifteen-year wait is an estimate, not an explicit Bible date.</small></p>
+  `,
+
+  `
+    <p><strong>Main theme: Do little things well.</strong></p>
+
+    <p>Begin with <strong>David</strong>. Show David caring for sheep.
+    Tap the large picture to reveal David caring for God's people as king.</p>
+
+    <p><strong>Say:</strong> “A little job helped him get ready for a big job.”</p>
+
+    <p>Use <strong>Toys</strong> or <strong>Helping</strong> for the children's
+    examples. Tap the large picture to switch between the small
+    responsibility and the growth it encourages.</p>
+
+    <p>Ask each child to choose one small job for this week.</p>
+
+    ${T(
+      "Whatever you do, work at it with all your heart, as working for the Lord!",
+      "无论做什么，都要从心里做，像是给主做的！",
+      "wú lùn zuò shén me dōu yào cóng xīn lǐ zuò xiàng shì gěi zhǔ zuò de"
+    )}
+
+    <p><small>Memory excerpt from Colossians 3:23, with a child-friendly
+    Chinese rendering. Small responsibilities help us grow ready to
+    serve; they do not guarantee fame, wealth, or becoming a king.</small></p>
+  `
+];
+
+function openTeacherDialog(prayer = false) {
+  document.querySelector("#dialogTitle").textContent = prayer
+    ? "🙏 Let's pray"
+    : `Teacher notes · ${titles[page]}`;
+
+  document.querySelector("#dialogBody").innerHTML = prayer
+    ? T(
+        "Dear God, help us love You and do little things well. In Jesus' name, amen.",
+        "神啊，帮我们爱你，做好小事。奉耶稣的名，阿们。",
+        "shén a bāng wǒ men ài nǐ zuò hǎo xiǎo shì fèng yē sū de míng ā men"
+      )
+    : `<p><strong>${esc(refs[page])}</strong></p>${teacherNotes[page]}`;
+
+  dialog.showModal();
+}
+
+document.querySelector("#teacherButton").addEventListener("click", () => {
+  openTeacherDialog();
+});
+
+/* ---------- Fullscreen ---------- */
+
+const fullscreenButton = document.querySelector("#fullscreenButton");
+const fullscreenNotice = document.querySelector("#fullscreenNotice");
+let fullscreenNoticeTimer;
+
+function showFullscreenNotice(message) {
+  clearTimeout(fullscreenNoticeTimer);
+  fullscreenNotice.textContent = message;
+  fullscreenNotice.hidden = false;
+
+  fullscreenNoticeTimer = setTimeout(() => {
+    fullscreenNotice.hidden = true;
+  }, 6000);
+}
+
+function fullscreenElement() {
+  return document.fullscreenElement ||
+         document.webkitFullscreenElement ||
+         null;
+}
+
+function updateFullscreenButton() {
+  const active = Boolean(fullscreenElement());
+
+  fullscreenButton.innerHTML = `
+    <span class="fullscreen-symbol" aria-hidden="true">⛶</span>
+    <span>${active ? "Exit" : "Full screen"}</span>
+  `;
+
+  fullscreenButton.setAttribute("aria-pressed", String(active));
+  fullscreenButton.setAttribute(
+    "aria-label",
+    active ? "Exit fullscreen" : "Enter fullscreen"
+  );
+
+  requestAnimationFrame(fitArtwork);
+}
+
+fullscreenButton.addEventListener("click", async () => {
+  try {
+    if (fullscreenElement()) {
+      const exit =
+        document.exitFullscreen ||
+        document.webkitExitFullscreen;
+
+      if (exit) await exit.call(document);
+    } else {
+      const root = document.documentElement;
+      const enter =
+        root.requestFullscreen ||
+        root.webkitRequestFullscreen;
+
+      if (!enter) {
+        showFullscreenNotice(
+          "Fullscreen is not available in this browser."
+        );
+        return;
+      }
+
+      await enter.call(root);
+    }
+
+    updateFullscreenButton();
+  } catch {
+    showFullscreenNotice(
+      "The browser could not enter fullscreen. Try opening this page directly in your browser."
+    );
+  }
+});
+
+document.addEventListener("fullscreenchange", updateFullscreenButton);
+document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
+
+/* ---------- MP3 audio with synthesized fallback ---------- */
+
+let audioContext;
+const activeAudio = new Set();
+const missingSounds = new Set();
+
+function unlockAudio() {
+  try {
+    const AudioClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioClass) return null;
+
+    audioContext ||= new AudioClass();
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
+
+    return audioContext;
+  } catch {
+    return null;
+  }
+}
+
+function tone(
+  ctx,
+  frequency,
+  start,
+  duration,
+  type = "sine",
+  volume = .1,
+  endFrequency
+) {
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+
+  if (endFrequency) {
+    oscillator.frequency.exponentialRampToValueAtTime(
+      endFrequency,
+      start + duration
+    );
+  }
+
+  gain.gain.setValueAtTime(.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + .015);
+  gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+
+  oscillator.connect(gain).connect(ctx.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + .03);
+}
+
+function synthesize(name, ctx) {
+  if (!ctx) return;
+
+  const t = ctx.currentTime + .02;
+
+  switch (name) {
+    case "correct":
+      tone(ctx, 660, t, .22);
+      tone(ctx, 990, t + .14, .35);
+      break;
+
+    case "wrong":
+      tone(ctx, 145, t, .2, "sawtooth", .055, 110);
+      tone(ctx, 110, t + .22, .24, "sawtooth", .055, 85);
+      break;
+
+    case "alert":
+      [0, .22, .44, .66].forEach((offset, i) => {
+        tone(
+          ctx,
+          i % 2 ? 440 : 720,
+          t + offset,
+          .19,
+          "triangle",
+          .11
+        );
+      });
+      break;
+
+    case "xray":
+      tone(ctx, 130, t, 1.05, "sawtooth", .04, 900);
+      tone(ctx, 700, t, 1.05, "sine", .06, 160);
+      break;
+
+    case "baa": {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      const vibrato = ctx.createOscillator();
+      const depth = ctx.createGain();
+
+      oscillator.type = "sawtooth";
+      oscillator.frequency.setValueAtTime(205, t);
+      oscillator.frequency.linearRampToValueAtTime(155, t + 1);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1200, t);
+      filter.frequency.linearRampToValueAtTime(550, t + 1);
+
+      vibrato.frequency.value = 12;
+      depth.gain.value = 15;
+      vibrato.connect(depth).connect(oscillator.frequency);
+
+      gain.gain.setValueAtTime(.0001, t);
+      gain.gain.exponentialRampToValueAtTime(.14, t + .1);
+      gain.gain.setValueAtTime(.1, t + .65);
+      gain.gain.exponentialRampToValueAtTime(.0001, t + 1.05);
+
+      oscillator.connect(filter).connect(gain).connect(ctx.destination);
+      oscillator.start(t);
+      vibrato.start(t);
+      oscillator.stop(t + 1.08);
+      vibrato.stop(t + 1.08);
+      break;
+    }
+
+    case "trumpet":
+      [392, 523.25, 659.25, 783.99].forEach((frequency, i) => {
+        tone(
+          ctx,
+          frequency,
+          t + i * .21,
+          i === 3 ? .75 : .24,
+          "sawtooth",
+          .055
+        );
+
+        tone(
+          ctx,
+          frequency / 2,
+          t + i * .21,
+          i === 3 ? .75 : .24,
+          "triangle",
+          .06
+        );
+      });
+      break;
+
+    default:
+      tone(ctx, 500, t, .1, "sine", .085, 230);
+  }
+}
+
+function playSound(name) {
+  const ctx = unlockAudio();
+
+  if (missingSounds.has(name)) {
+    synthesize(name, ctx);
+    return;
+  }
+
+  const audio = new Audio(`sounds/${name}.mp3`);
+  audio.volume = .7;
+  activeAudio.add(audio);
+
+  let resolved = false;
+  let timer;
+
+  function fallback() {
+    if (resolved) return;
+
+    resolved = true;
+    clearTimeout(timer);
+    audio.pause();
+    activeAudio.delete(audio);
+    missingSounds.add(name);
+    synthesize(name, ctx);
+  }
+
+  audio.addEventListener("error", fallback, { once: true });
+
+  audio.addEventListener("playing", () => {
+    if (resolved) {
+      audio.pause();
+      return;
+    }
+
+    resolved = true;
+    clearTimeout(timer);
+  }, { once: true });
+
+  audio.addEventListener("ended", () => {
+    activeAudio.delete(audio);
+  }, { once: true });
+
+  timer = setTimeout(fallback, 1200);
+
+  try {
+    audio.play()?.catch(fallback);
+  } catch {
+    fallback();
+  }
+}
+
+/* ---------- Start ---------- */
+
+updateFullscreenButton();
+render();
+</script>
+</body>
+</html>
